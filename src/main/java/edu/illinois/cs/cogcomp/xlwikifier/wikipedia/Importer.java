@@ -46,15 +46,17 @@ public class Importer {
 
     public void setPath(){
         String dumpdir = ConfigParameters.dump_path+lang;
+        dumpdir = ConfigParameters.dump_path+"olden";
         if(!(new File(dumpdir).exists()))
             new File(dumpdir).mkdir();
         dumpfile = dumpdir+"/"+lang+"wiki-"+date+"-pages-articles.xml.bz2";
+        dumpfile = "/shared/bronte/cheng88/wikidump/enwiki-latest-pages-articles2014Jan.xml.bz2";
         pagefile = dumpdir+"/"+lang+"wiki-"+date+"-page.sql.gz";
         langfile = dumpdir+"/"+lang+"wiki-"+date+"-langlinks.sql.gz";
         redirectfile = dumpdir+"/"+lang+"wiki-"+date+"-redirect.sql.gz";
         docdir = dumpdir+"/docs/";
         candfile = dumpdir+"/links";
-        textfile = dumpdir+"sg.withtitle";
+        textfile = dumpdir+"/sg.withtitle";
 
 //        if(new File(textfile).exists()){
 //            logger.warn(textfile+" exists!");
@@ -200,7 +202,8 @@ public class Importer {
     public void importCandidates(){
         logger.info("Importing into candidate DB...");
         WikiCandidateGenerator wcg = new WikiCandidateGenerator();
-        wcg.populateDB(lang, redirectfile, pagefile, candfile);
+//        wcg.populateDB(lang, redirectfile, pagefile, candfile);
+        wcg.populateDBforOldEN(lang, candfile);
     }
 
     public void importTFIDF(){
@@ -224,7 +227,7 @@ public class Importer {
 //            importer.parseWikiDump();
 //            importer.importLangLinks();
             importer.importCandidates();
-//            importer.importTFIDF();
+            importer.importTFIDF();
         } catch (Exception e) {
             e.printStackTrace();
         }

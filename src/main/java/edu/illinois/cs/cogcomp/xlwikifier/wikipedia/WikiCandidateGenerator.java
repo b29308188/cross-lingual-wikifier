@@ -129,6 +129,14 @@ public class WikiCandidateGenerator {
         return title;
     }
 
+    public String getFinalTitleOldEN(String title){
+        title = title.toLowerCase().replaceAll(" ", "_");
+
+        if(id2redirect.containsKey(title)){
+            return id2redirect.get(title);
+        }
+        return title;
+    }
 
     public void setCandidates(QueryDocument doc, String lang){
 
@@ -337,7 +345,11 @@ public class WikiCandidateGenerator {
                 String[] sp = line.split("\t");
                 if(sp.length<2) continue;
                     String s = sp[0].toLowerCase().trim();
-                    String t = getFinalTitle(sp[1]);
+                String t;
+                if(lang.equals("olden"))
+                    t = getFinalTitleOldEN(sp[1]);
+                else
+                    t = getFinalTitle(sp[1]);
 
                     String[] tokens;
                     if (lang.equals("zh"))
@@ -372,7 +384,22 @@ public class WikiCandidateGenerator {
                 if (!s2t.containsKey(token))
                     s2t.put(token, new ArrayList<>());
                 s2t.get(token).add(title);
+                if(!t2s.containsKey(title))
+                    t2s.put(title, new ArrayList<>());
                 t2s.get(title).add(token);
+            }
+        }
+
+        if(lang.equals("olden")){
+            for(String r: id2redirect.keySet()){
+                String[] tokens = r.trim().split("_");
+                String title = id2redirect.get(r);
+                for(String token: tokens) {
+                    if (!s2t.containsKey(token))
+                        s2t.put(token, new ArrayList<>());
+                    s2t.get(token).add(title);
+                    t2s.get(title).add(token);
+                }
             }
         }
 
@@ -434,6 +461,25 @@ public class WikiCandidateGenerator {
         db.commit();
         db.close();
 //        loadDB(lang, true);
+    }
+
+    public void populateDBforOldEN(String lang, String cand_file){
+        tokenizer = MultiLingualTokenizer.getTokenizer(lang);
+        String rfile ="/shared/bronte/tac2014/data/WikiData/Redirects/2014-01-24.redirect";
+        this.id2redirect = new HashMap<>();
+        try {
+            for(String line: LineIO.read(rfile)){
+                String[] parts = line.toLowerCase().split("\t");
+                if(parts.length == 2)
+                    id2redirect.put(parts[0], parts[1]);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        populateMentionDB(cand_file, lang);
+        populateWord2Title(cand_file, lang);
+        db.commit();
+        db.close();
     }
 
     public void populate4GramIdx(String lang, String redirect_file, String page_file){
@@ -534,7 +580,11 @@ public class WikiCandidateGenerator {
                 if(sp.length<2) continue;
 
                     String s = sp[0].toLowerCase().trim();
-                    String t = getFinalTitle(sp[1]);
+                    String t;
+                    if(lang.equals("olden"))
+                        t = getFinalTitleOldEN(sp[1]);
+                    else
+                        t = getFinalTitle(sp[1]);
                     if (!s2t.containsKey(s))
                         s2t.put(s, new ArrayList<>());
                     s2t.get(s).add(t);
@@ -553,6 +603,19 @@ public class WikiCandidateGenerator {
                 s2t.put(title_surface, new ArrayList<>());
             s2t.get(title_surface).add(title);
             t2s.get(title).add(title_surface);
+        }
+
+        if(lang.equals("olden")){
+            for(String r: id2redirect.keySet()){
+                String surface = r.replaceAll("_", " ").trim();
+                String title = id2redirect.get(r);
+                if(!s2t.containsKey(surface))
+                    s2t.put(surface, new ArrayList<>());
+                s2t.get(surface).add(title);
+                if(!t2s.containsKey(title))
+                    t2s.put(title, new ArrayList<>());
+                t2s.get(title).add(surface);
+            }
         }
 
         logger.info("Calculating p(t|s)...");
@@ -637,7 +700,8 @@ public class WikiCandidateGenerator {
         WikiCandidateGenerator g = new WikiCandidateGenerator();
         g.tac = true;
         g.loadDB(args[0], false);
-        System.out.println(g.getCandsBySurface("Michael Pettis", "en", false));
+//        System.out.println(g.getCandsBySurface("Michael Pettis", "en", false));
+        System.out.println(g.getCandsBySurface("czech", "en", false));
         System.exit(-1);
 
         String lang = "en";

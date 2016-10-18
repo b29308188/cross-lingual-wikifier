@@ -275,10 +275,14 @@ public class WordEmbedding {
     }
 
     public static void main(String[] args) {
+        ConfigParameters cp = new ConfigParameters();
+        cp.getPropValues();
         WordEmbedding we = new WordEmbedding();
         String dir = "/shared/preprocessed/ctsai12/multilingual/cca/";
-		String name = args[0];
-//        String name = "es";
+        we.loadMultiDBNew("es", true);
+        System.out.println(we.dim);
+        System.exit(-1);
+        String name = "es";
         we.createMultiVec(name);
 //        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig1_projected.txt", we.multi_vec_en);
 //        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig2_projected.txt", we.multi_vec_lang);
