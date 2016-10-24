@@ -45,7 +45,9 @@ public class CrossLingualWikifier {
             lang = l;
             wcg = new WikiCandidateGenerator();
 //            if(ranker != null) ranker.closeDBs();
-            ranker = Ranker.loadPreTrainedRanker(lang, ConfigParameters.model_path+"/ranker/default/"+lang+"/ranker.model");
+            ranker = Ranker.loadPreTrainedRanker(lang, ConfigParameters.model_path+"/ranker/en.2014.3k.f11.ranker.model");
+//            ranker = Ranker.loadPreTrainedRanker(lang, ConfigParameters.model_path+"/ranker/default/"+lang+"/ranker.model");
+
             ranker.fm.ner_mode = false;
 //            if(ll!=null) ll.closeDB();
             ll = new LangLinker();
@@ -79,6 +81,9 @@ public class CrossLingualWikifier {
         docs.add(doc);
         wcg.genCandidates(docs, lang);
         ranker.setWikiTitleByModel(docs);
+
+//        ranker.setWikiTitleByTopCand(docs);
+
 //        te.solveByWikiTitle(docs, lang);
 
         // get the English title

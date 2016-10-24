@@ -46,11 +46,10 @@ public class Importer {
 
     public void setPath(){
         String dumpdir = ConfigParameters.dump_path+lang;
-        dumpdir = ConfigParameters.dump_path+"olden";
         if(!(new File(dumpdir).exists()))
             new File(dumpdir).mkdir();
         dumpfile = dumpdir+"/"+lang+"wiki-"+date+"-pages-articles.xml.bz2";
-        dumpfile = "/shared/bronte/cheng88/wikidump/enwiki-latest-pages-articles2014Jan.xml.bz2";
+//        dumpfile = "/shared/bronte/cheng88/wikidump/enwiki-latest-pages-articles2014Jan.xml.bz2";
         pagefile = dumpdir+"/"+lang+"wiki-"+date+"-page.sql.gz";
         langfile = dumpdir+"/"+lang+"wiki-"+date+"-langlinks.sql.gz";
         redirectfile = dumpdir+"/"+lang+"wiki-"+date+"-redirect.sql.gz";
@@ -227,7 +226,7 @@ public class Importer {
 //            importer.parseWikiDump();
 //            importer.importLangLinks();
             importer.importCandidates();
-            importer.importTFIDF();
+//            importer.importTFIDF();
         } catch (Exception e) {
             e.printStackTrace();
         }

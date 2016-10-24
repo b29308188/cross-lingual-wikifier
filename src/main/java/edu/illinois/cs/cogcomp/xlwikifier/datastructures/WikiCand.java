@@ -28,6 +28,6 @@ public class WikiCand {
     public void setScore(double s){ this.score = s; }
 
     public String toString(){
-        return title+"\t"+orig_title+"\t"+score;
+        return title+"\t"+orig_title+"\t"+ptgivens;
     }
 }

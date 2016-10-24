@@ -12,6 +12,7 @@ public class QueryDocument {
     private String id;
     private transient TextAnnotation ta;
     public List<ELMention> mentions = new ArrayList<>();
+    public List<ELMention> gold_mentions;
     public String plain_text;
     public List<ELMention> tokens = new ArrayList<>();
 

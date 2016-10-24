@@ -95,7 +95,7 @@ public class CrossLingualNER {
     }
 
     public static Data doc2NERData(QueryDocument doc){
-        logger.info("Converting document datastructure...");
+//        logger.info("Converting document datastructure...");
 
         Vector<Vector<String>> tokens = new Vector<>();
         TextAnnotation ta = doc.getTextAnnotation();
@@ -201,7 +201,7 @@ public class CrossLingualNER {
     }
 
     public static QueryDocument annotate(String text){
-        logger.info("Running multilingual NER...");
+//        logger.info("Running multilingual NER...");
 
         if(lang == null){
             logger.error("lang not set!");

@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 
@@ -33,17 +34,20 @@ public class WikiCandidateGenerator {
     public ConcurrentNavigableMap<String, String[]> word2titles;
     public ConcurrentNavigableMap<String, String[]> fourgramidx;
     public ConcurrentNavigableMap<String, String[]> trigramidx;
+    public ConcurrentNavigableMap<String, Integer> title2cnt;
     public NavigableSet<Fun.Tuple3<String, String, Double>> ptgivens;
     public NavigableSet<Fun.Tuple3<String, String, Double>> psgivent;
     public NavigableSet<Fun.Tuple3<String, String, Double>> ptgivenss;
     public NavigableSet<Fun.Tuple3<String, String, Double>> pssgivent;
+    public NavigableSet<String> titles;
     private String lang;
-    private Map<String, String> title2id, id2redirect;
+    public Map<String, String> title2id, id2redirect;
     private Map<String, List<WikiCand>> cand_cache = new HashMap<>();
     private boolean use_cache = false;
     private int top = 10;
     public boolean tac = false;
     private Tokenizer tokenizer;
+    private Set<String> valid_titles;
     private static Logger logger = LoggerFactory.getLogger(WikiCandidateGenerator.class);
 
     public WikiCandidateGenerator(){
@@ -64,10 +68,10 @@ public class WikiCandidateGenerator {
 
     public void loadDB(String lang, boolean read_only){
         this.lang = lang;
-        if(db_pool.containsKey(lang)) db = db_pool.get(lang);
-        else {
-//            String dbfile = ConfigParameters.db_path+"/candidates/"+lang+"_candidates";
-            String dbfile = "/shared/preprocessed/ctsai12/multilingual/mapdb/candidates/"+lang+"_candidates";
+//        if(db_pool.containsKey(lang)) db = db_pool.get(lang);
+//        else {
+            String dbfile = ConfigParameters.db_path+"/candidates/"+lang+"_candidates";
+//            String dbfile = "/shared/bronte/ctsai12/multilingual/olden/"+lang+"_candidates-new1";
             if(read_only) {
                 db = DBMaker.newFileDB(new File(dbfile))
                         .cacheSize(1000)
@@ -83,12 +87,12 @@ public class WikiCandidateGenerator {
                         .closeOnJvmShutdown()
                         .make();
             }
-            db_pool.put(lang, db);
-        }
+//            db_pool.put(lang, db);
+//        }
         surface2titles = db.createTreeMap("s2t")
                 .keySerializer(BTreeKeySerializer.STRING)
                 .makeOrGet();
-        word2titles = db.createTreeMap("ss2t")
+        title2cnt = db.createTreeMap("title2cnt")
                 .keySerializer(BTreeKeySerializer.STRING)
                 .makeOrGet();
         fourgramidx = db.createTreeMap("4gram")
@@ -106,6 +110,14 @@ public class WikiCandidateGenerator {
         pssgivent = db.createTreeSet("psst")
                 .serializer(BTreeKeySerializer.TUPLE3)
                 .makeOrGet();
+//        titles = db.createTreeSet("titles")
+//                .serializer(BTreeKeySerializer.STRING)
+//                .makeOrGet();
+        if(ConfigParameters.db_path.contains("olden")) {
+            word2titles = db.createTreeMap("ss2t")
+                    .keySerializer(BTreeKeySerializer.STRING)
+                    .makeOrGet();
+        }
     }
 
     public void closeDB(){
@@ -116,6 +128,15 @@ public class WikiCandidateGenerator {
         this.lang = null;
     }
 
+    public Set<String> getAllTitles(){
+        logger.info("Getting all titles...");
+        Set<String> ret = new HashSet<>();
+        for(Fun.Tuple3<String, String, Double> t: ptgivens){
+            ret.add(t.a);
+        }
+        logger.info("{}", ret.size());
+        return ret;
+    }
 
     public String getFinalTitle(String title){
         title = title.toLowerCase().replaceAll(" ", "_");
@@ -144,12 +165,27 @@ public class WikiCandidateGenerator {
         for(ELMention m: doc.mentions){
             if(m.is_ne) continue;
 
-            if(m.getCandidates().size()==0) {
                 List<WikiCand> cands = getCandidate(m.getMention(), lang);
 
-                cands = cands.subList(0, Math.min(top, cands.size()));
-                m.getCandidates().addAll(cands);
+
+//                cands = cands.subList(0, Math.min(top, cands.size()));
+//                m.getCandidates().addAll(cands);
+            double sum = 0.0;
+            for(WikiCand c: cands)
+                sum += c.score;
+            for(WikiCand c: cands) {
+                c.score /= sum;
+                c.psgivent *= c.score;
             }
+
+            cands = cands.stream().sorted((x1, x2) -> Double.compare(x2.psgivent, x1.psgivent))
+                    .collect(Collectors.toList());
+
+            cands = cands.subList(0, Math.min(top, cands.size()));
+
+            m.setCandidates(cands);
+
+
         }
     }
 
@@ -167,11 +203,11 @@ public class WikiCandidateGenerator {
         surface = surface.toLowerCase().trim();
 
         List<WikiCand> cands = getCandsBySurface(surface, lang, false);
-        if (cands.size() == 0 && !tac)
-            cands = getCandidateByWord(surface, lang, 6);
-        if(tac && cands.size() == 0) {  // NAACL
-            cands = getCandsBySurface(surface, "en", false);
-        }
+//        if (cands.size() == 0 && !tac)
+//            cands = getCandidateByWord(surface, lang, 6);
+//        if(tac && cands.size() == 0) {  // NAACL
+//            cands = getCandsBySurface(surface, "en", false);
+//        }
 
         return cands;
     }
@@ -199,7 +235,7 @@ public class WikiCandidateGenerator {
         for(String ps: possible_surface) {
             if (surface2titles.containsKey(ps)) {
                 for (String title : surface2titles.get(ps)) {
-                    if (cnt++ == top) break;
+//                    if (cnt++ == top) break;
                     double pts = 0, pst = 0;
                     for (Double score : Fun.filter(ptgivens, title, ps)) {
                         pts = score;
@@ -209,9 +245,13 @@ public class WikiCandidateGenerator {
                         pst = score;
                         break;
                     }
-                    int dist = getEditDistance(title, surface);
-                    double s = 1;
-                    if(dist != 0) s = 1.0/dist;
+//                    int dist = getEditDistance(title, surface);
+//                    double s = 1;
+//                    if(dist != 0) s = 1.0/dist;
+
+                    double s = 0;
+                    if(title2cnt.containsKey(title))
+                        s = title2cnt.get(title);
                     WikiCand cand = new WikiCand(title, s);
                     cand.psgivent = pst;
                     cand.ptgivens = pts;
@@ -222,7 +262,7 @@ public class WikiCandidateGenerator {
                 }
             }
         }
-        return cands.subList(0, Math.min(20, cands.size()));
+        return cands;
     }
 
     private int getEditDistance(String title, String surface){
@@ -329,12 +369,12 @@ public class WikiCandidateGenerator {
         if(db==null)
             loadDB(lang, false);
 
-        word2titles.clear();
-        pssgivent.clear();
-        ptgivenss.clear();
+//        word2titles.clear();
+//        pssgivent.clear();
+//        ptgivenss.clear();
 
-        Map<String, List<String>> s2t = new HashMap<>();
-        Map<String, List<String>> t2s = new HashMap<>();
+        Map<String, Map<String, Integer>> s2t = new HashMap<>();
+        Map<String, Map<String, Integer>> t2s = new HashMap<>();
 
         try {
             for(String line: LineIO.read(file)){
@@ -346,7 +386,7 @@ public class WikiCandidateGenerator {
                 if(sp.length<2) continue;
                     String s = sp[0].toLowerCase().trim();
                 String t;
-                if(lang.equals("olden"))
+                if(lang.equals("en"))
                     t = getFinalTitleOldEN(sp[1]);
                 else
                     t = getFinalTitle(sp[1]);
@@ -359,11 +399,19 @@ public class WikiCandidateGenerator {
 
                     for (String ss : tokens) {
                         if (!s2t.containsKey(ss))
-                            s2t.put(ss, new ArrayList<>());
-                        s2t.get(ss).add(t);
+                            s2t.put(ss, new HashMap<>());
+                        Map<String, Integer> tmp = s2t.get(ss);
+                        if(tmp.containsKey(t))
+                            tmp.put(t, tmp.get(t)+1);
+                        else
+                            tmp.put(t, 1);
                         if (!t2s.containsKey(t))
-                            t2s.put(t, new ArrayList<>());
-                        t2s.get(t).add(ss);
+                            t2s.put(t, new HashMap<>());
+                        tmp = t2s.get(t);
+                        if(tmp.containsKey(ss))
+                            tmp.put(ss, tmp.get(ss)+1);
+                        else
+                            tmp.put(ss, 1);
                     }
 //                }
             }
@@ -373,35 +421,44 @@ public class WikiCandidateGenerator {
         logger.info("s2t size "+s2t.size());
         logger.info("t2s size "+t2s.size());
 
-        for(String title: t2s.keySet()){
-            String[] title_tokens = null;
-            if(lang.equals("zh"))
-                title_tokens = title.toLowerCase().split("·");
-            else
-                title_tokens = title.toLowerCase().split("_");
+//        for(String title: t2s.keySet()){
+//            String[] title_tokens = null;
+//            if(lang.equals("zh"))
+//                title_tokens = title.toLowerCase().split("·");
+//            else
+//                title_tokens = title.toLowerCase().split("_");
+//
+//            for(String token: title_tokens){
+//                if (!s2t.containsKey(token))
+//                    s2t.put(token, new HashMap<>());
+//                Map<String, Integer> tmp = s2t.get(token);
+//                if(tmp.containsKey(title))
+//                    tmp.put(title, tmp.get(title)+1);
+//                else
+//                    tmp.put(title, 1);
+//
+//                if(!t2s.containsKey(title))
+//                    t2s.put(title, new HashMap<>());
+//                tmp = t2s.get(title);
+//                if(tmp.containsKey(token))
+//                    tmp.put(token, tmp.get(token)+1);
+//                else
+//                    tmp.put(token, 1);
+//            }
+//        }
 
-            for(String token: title_tokens){
-                if (!s2t.containsKey(token))
-                    s2t.put(token, new ArrayList<>());
-                s2t.get(token).add(title);
-                if(!t2s.containsKey(title))
-                    t2s.put(title, new ArrayList<>());
-                t2s.get(title).add(token);
-            }
-        }
-
-        if(lang.equals("olden")){
-            for(String r: id2redirect.keySet()){
-                String[] tokens = r.trim().split("_");
-                String title = id2redirect.get(r);
-                for(String token: tokens) {
-                    if (!s2t.containsKey(token))
-                        s2t.put(token, new ArrayList<>());
-                    s2t.get(token).add(title);
-                    t2s.get(title).add(token);
-                }
-            }
-        }
+//        if(lang.equals("olden")){
+//            for(String r: id2redirect.keySet()){
+//                String[] tokens = r.trim().split("_");
+//                String title = id2redirect.get(r);
+//                for(String token: tokens) {
+//                    if (!s2t.containsKey(token))
+//                        s2t.put(token, new ArrayList<>());
+//                    s2t.get(token).add(title);
+//                    t2s.get(title).add(token);
+//                }
+//            }
+//        }
 
         logger.info("Calculating p(t|s)...");
         int cnt = 0;
@@ -409,7 +466,7 @@ public class WikiCandidateGenerator {
             cnt ++;
             if(cnt % 10000 == 0)
                 System.out.print(cnt*100.0/s2t.size()+"\r");
-            Map<String, Long> t2cnt = s2t.get(surface).stream().collect(groupingBy(x -> x, counting()));
+            Map<String, Integer> t2cnt = s2t.get(surface);
             double sum = 0;
             for(String title: t2cnt.keySet()){
                 sum+=t2cnt.get(title);
@@ -418,19 +475,26 @@ public class WikiCandidateGenerator {
                 ptgivenss.add(new Fun.Tuple3<>(title, surface, t2cnt.get(title)/sum));
             }
 
-            List<String> sorted_titles = t2cnt.entrySet().stream().sorted((x1, x2) -> Long.compare(x2.getValue(), x1.getValue()))
+            List<String> sorted_titles = t2cnt.entrySet().stream().sorted((x1, x2) -> Integer.compare(x2.getValue(), x1.getValue()))
                     .map(x -> x.getKey()).collect(toList());
 
             sorted_titles = sorted_titles.subList(0, Math.min(sorted_titles.size(), 50));
 
             String[] titles = new String[sorted_titles.size()];
             titles = sorted_titles.toArray(titles);
-            word2titles.put(surface, titles);
+//            System.out.println(word2titles.size());
+            try {
+                word2titles.put(surface, titles);
+            } catch (Exception e){
+                System.out.println(surface);
+                System.out.println(Arrays.asList(titles));
+                continue;
+            }
         }
 
         logger.info("Calculating p(s|t)...");
         for(String title: t2s.keySet()){
-            Map<String, Long> s2cnt = t2s.get(title).stream().collect(groupingBy(x -> x, counting()));
+            Map<String, Integer> s2cnt = t2s.get(title);
             double sum = 0;
             for(String surface: s2cnt.keySet()){
                 sum+=s2cnt.get(surface);
@@ -439,7 +503,6 @@ public class WikiCandidateGenerator {
                 pssgivent.add(new Fun.Tuple3<>(surface, title, s2cnt.get(surface)/sum));
             }
         }
-
     }
 
     /**
@@ -465,19 +528,28 @@ public class WikiCandidateGenerator {
 
     public void populateDBforOldEN(String lang, String cand_file){
         tokenizer = MultiLingualTokenizer.getTokenizer(lang);
-        String rfile ="/shared/bronte/tac2014/data/WikiData/Redirects/2014-01-24.redirect";
-        this.id2redirect = new HashMap<>();
-        try {
-            for(String line: LineIO.read(rfile)){
-                String[] parts = line.toLowerCase().split("\t");
-                if(parts.length == 2)
-                    id2redirect.put(parts[0], parts[1]);
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
+
+//        this.id2redirect = new HashMap<>();
+//        try {
+//            logger.info("Loading valid titles...");
+//            valid_titles = LineIO.read("/shared/preprocessed/ctsai12/multilingual/wikidump-2014/en/docs/file.list.rand")
+//                    .stream().map(x -> x.toLowerCase().replaceAll(" ", "_"))
+//                    .collect(Collectors.toSet());
+//
+//            logger.info("Loading redirects...");
+//            String rfile ="/shared/bronte/tac2014/data/WikiData/Redirects/2014-01-24.redirect";
+//            for(String line: LineIO.read(rfile)){
+//                String[] parts = line.toLowerCase().split("\t");
+//                if(parts.length == 2)
+//                    if(valid_titles.contains(parts[1]))
+//                        id2redirect.put(parts[0], parts[1]);
+//            }
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        }
+
         populateMentionDB(cand_file, lang);
-        populateWord2Title(cand_file, lang);
+//        populateWord2Title(cand_file, lang);
         db.commit();
         db.close();
     }
@@ -564,58 +636,50 @@ public class WikiCandidateGenerator {
         psgivent.clear();
         ptgivens.clear();
 
-        Map<String, List<String>> s2t = new HashMap<>();
-        Map<String, List<String>> t2s = new HashMap<>();
-
-        String wikidir = ConfigParameters.dump_path+lang+"/"+lang+"_wiki_view/annotation";
+        Map<String, Map<String, Integer>> s2t = new HashMap<>();
+        Map<String, Map<String, Integer>> t2s = new HashMap<>();
+        Map<String, Integer> title2cnt = new HashMap<>();
 
         try {
             for(String line: LineIO.read(file)){
-//            for(File f: new File(wikidir).listFiles()) {
-//                Map<String, String> s2t_ = getSurface2Title(f.getName(), lang);
-//                for(String surf: s2t_.keySet()){
 
                 String[] sp = line.split("\t");
 
                 if(sp.length<2) continue;
 
-                    String s = sp[0].toLowerCase().trim();
-                    String t;
-                    if(lang.equals("olden"))
-                        t = getFinalTitleOldEN(sp[1]);
-                    else
-                        t = getFinalTitle(sp[1]);
-                    if (!s2t.containsKey(s))
-                        s2t.put(s, new ArrayList<>());
-                    s2t.get(s).add(t);
-                    if (!t2s.containsKey(t))
-                        t2s.put(t, new ArrayList<>());
-                    t2s.get(t).add(s);
+                String s = sp[0].toLowerCase().trim();
+                String t = sp[1];
+
+                t = getFinalTitle(t);
+
+                if(title2cnt.containsKey(t))
+                    title2cnt.put(t, title2cnt.get(t)+1);
+                else
+                    title2cnt.put(t, 1);
+
+
+                if (!s2t.containsKey(s))
+                    s2t.put(s, new HashMap<>());
+
+                Map<String, Integer> tmp = s2t.get(s);
+
+                if(!tmp.containsKey(t))
+                    tmp.put(t, 1);
+                else
+                    tmp.put(t, tmp.get(t)+1);
+
+                if (!t2s.containsKey(t))
+                    t2s.put(t, new HashMap<>());
+
+                tmp = t2s.get(t);
+                if(!tmp.containsKey(s))
+                    tmp.put(s, 1);
+                else
+                    tmp.put(s, tmp.get(s)+1);
 //                }
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
-
-        for(String title: t2s.keySet()){
-            String title_surface = title.replaceAll("_", " ").toLowerCase().trim();
-            if(!s2t.containsKey(title_surface))
-                s2t.put(title_surface, new ArrayList<>());
-            s2t.get(title_surface).add(title);
-            t2s.get(title).add(title_surface);
-        }
-
-        if(lang.equals("olden")){
-            for(String r: id2redirect.keySet()){
-                String surface = r.replaceAll("_", " ").trim();
-                String title = id2redirect.get(r);
-                if(!s2t.containsKey(surface))
-                    s2t.put(surface, new ArrayList<>());
-                s2t.get(surface).add(title);
-                if(!t2s.containsKey(title))
-                    t2s.put(title, new ArrayList<>());
-                t2s.get(title).add(surface);
-            }
         }
 
         logger.info("Calculating p(t|s)...");
@@ -624,7 +688,7 @@ public class WikiCandidateGenerator {
             cnt++;
             if(cnt % 10000 == 0)
                 System.out.print(cnt*100.0/s2t.size()+"\r");
-            Map<String, Long> t2cnt = s2t.get(surface).stream().collect(groupingBy(x -> x, counting()));
+            Map<String, Integer> t2cnt = s2t.get(surface);
             double sum = 0;
             for(String title: t2cnt.keySet()){
                 sum+=t2cnt.get(title);
@@ -633,7 +697,7 @@ public class WikiCandidateGenerator {
                 ptgivens.add(new Fun.Tuple3<>(title, surface, t2cnt.get(title)/sum));
             }
 
-            List<String> sorted_titles = t2cnt.entrySet().stream().sorted((x1, x2) -> Long.compare(x2.getValue(), x1.getValue()))
+            List<String> sorted_titles = t2cnt.entrySet().stream().sorted((x1, x2) -> Integer.compare(x2.getValue(), x1.getValue()))
                     .map(x -> x.getKey()).collect(toList());
 
             sorted_titles = sorted_titles.subList(0, Math.min(sorted_titles.size(), 50));
@@ -645,7 +709,7 @@ public class WikiCandidateGenerator {
 
         logger.info("Calculating p(s|t)...");
         for(String title: t2s.keySet()){
-            Map<String, Long> s2cnt = t2s.get(title).stream().collect(groupingBy(x -> x, counting()));
+            Map<String, Integer> s2cnt = t2s.get(title);
             double sum = 0;
             for(String surface: s2cnt.keySet()){
                 sum+=s2cnt.get(surface);
@@ -654,10 +718,15 @@ public class WikiCandidateGenerator {
                 psgivent.add(new Fun.Tuple3<>(surface, title, s2cnt.get(surface)/sum));
             }
         }
+
+        logger.info("Writing title to count");
+        for(String title: title2cnt.keySet()){
+            this.title2cnt.put(title, title2cnt.get(title));
+        }
     }
 
     public void genCandidates(List<QueryDocument> docs, String lang){
-        logger.info("Generating candidates...");
+//        logger.info("Generating candidates...");
         tokenizer = MultiLingualTokenizer.getTokenizer(lang);
         if(db == null || db.isClosed() || this.lang != lang)
             loadDB(lang, true);
@@ -700,8 +769,10 @@ public class WikiCandidateGenerator {
         WikiCandidateGenerator g = new WikiCandidateGenerator();
         g.tac = true;
         g.loadDB(args[0], false);
+        for(WikiCand c:g.getCandsBySurface(args[1], "en", false))
+            System.out.println(c);
 //        System.out.println(g.getCandsBySurface("Michael Pettis", "en", false));
-        System.out.println(g.getCandsBySurface("czech", "en", false));
+//        System.out.println(g.getCandsBySurface("czech", "en", false));
         System.exit(-1);
 
         String lang = "en";

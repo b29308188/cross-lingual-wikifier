@@ -27,6 +27,7 @@ public class WikiDocReader {
     public Map<String, String> title_map;
     public Tokenizer tokenizer;
     private static Logger logger = LoggerFactory.getLogger(WikiDocReader.class);
+    private String dumpdir;
     public WikiDocReader(){}
 
     public WikiDocReader(String lang){
@@ -56,12 +57,11 @@ public class WikiDocReader {
     }
 
     public QueryDocument readWikiDocSingle(String lang, String filename, boolean check){
-        String dir = ConfigParameters.dump_path+lang+"/"+lang+"_wiki_view/";
         List<String> lines = null;
         TextAnnotation ta = null;
         try {
-            lines = LineIO.read(dir+"annotation/"+filename);
-            String plain = FileUtils.readFileToString(new File(dir+"plain/"+filename), "UTF-8");
+            lines = LineIO.read(dumpdir+"annotation/"+filename);
+            String plain = FileUtils.readFileToString(new File(dumpdir+"plain/"+filename), "UTF-8");
             ta = tokenizer.getTextAnnotation(plain);
             if(ta == null)
                 return null;
@@ -103,10 +103,6 @@ public class WikiDocReader {
             try {
                 int start_idx = ta.getTokenIdFromCharacterOffset(m.getStartOffset());
                 int end_idx = ta.getTokenIdFromCharacterOffset(m.getEndOffset() - 1);
-//                if (!lang.equals("zh"))
-//                    surface = adoc.getSurface(m.getStartOffset(), m.getEndOffset());
-//                else
-//                    surface = adoc.getSurfaceNoSpace(m.getStartOffset(), m.getEndOffset());
                 surface = ta.getText().substring(m.getStartOffset(), m.getEndOffset());
                 surface = surface.replaceAll("\n", " ");
 
@@ -114,20 +110,11 @@ public class WikiDocReader {
                 if (surface == null || m.getStartOffset() < 0 ||
                         start_idx < 0 || end_idx < 0
                         || !surface.contains(ta.getToken(start_idx))
-                        || !surface.contains(ta.getToken(end_idx))) {
-                    if(check)
-                        return null;
-                    else
-                        m.setMention(null);
-                }
-                else {
-                    m.setMention(surface);
-                }
-            } catch (Exception e) {
-                if(check)
+                        || !surface.contains(ta.getToken(end_idx)))
                     return null;
-                else
-                    m.setMention(null);
+                m.setMention(surface);
+            } catch (Exception e) {
+                return null;
             }
         }
         mentions = mentions.stream().filter(x -> x.getMention()!=null && !x.getMention().trim().isEmpty())
@@ -139,56 +126,40 @@ public class WikiDocReader {
         return doc;
     }
 
-    public List<QueryDocument> readWikiDocsNew(String lang, int start, int end){
+    public List<QueryDocument> readWikiDocsNew(String lang, int n){
         logger.info("Reading "+lang+" wikipedia docs...");
         List<String> paths = null;
-        String dir = null;
+        dumpdir = ConfigParameters.dump_path+lang+"/docs/";
 
         tokenizer = MultiLingualTokenizer.getTokenizer(lang);
 
-        Set<String> badfile = new HashSet<>();
-
         try {
-            dir = "/shared/preprocessed/ctsai12/multilingual/wikidump/"+lang+"/"+lang+"_wiki_view/";
-//            dir = "/shared/preprocessed/ctsai12/multilingual/wikidump/"+lang+"/docs/";
-            paths = LineIO.read(dir+"file.list.rand");
-//            badfile.addAll(LineIO.read(dir+"bad.list"));
+            paths = LineIO.read(dumpdir+"file.list.rand");
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
 
         List<QueryDocument> docs = new ArrayList<>();
         int cnt = 0;
-        int bad = 0;
-        for(String filename: paths.subList(start, Math.min(paths.size(),end))) {
+        for(String filename: paths) {
             if((cnt++)%100 == 0)
                 System.out.print((cnt++) + "\r");
-            if(badfile.contains(filename)) continue;
+            if(docs.size() == n) break;
 
             QueryDocument doc = readWikiDocSingle(lang, filename, true);
-            if(doc == null || doc.mentions.size() == 0){
-                bad++;
-                badfile.add(filename);
+            if(doc == null || doc.mentions.size() == 0)
                 continue;
-            }
             docs.add(doc);
         }
         System.out.println();
-        logger.info("#bad "+bad);
         logger.info("#docs "+docs.size());
         logger.info("#mentions "+docs.stream().flatMap(x -> x.mentions.stream()).count());
-        String badstr = badfile.stream().collect(joining("\n"));
-        try {
-            FileUtils.writeStringToFile(new File(dir+"bad.list"), badstr, "UTF-8");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         return docs;
     }
 
     public static void main(String[] args) throws Exception {
         WikiDocReader r = new WikiDocReader();
-        r.readWikiDocsNew("zh", 0, 5000);
+        r.readWikiDocsNew("zh", 5000);
 
     }
 }

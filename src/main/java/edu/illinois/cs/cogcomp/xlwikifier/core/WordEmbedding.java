@@ -35,7 +35,7 @@ public class WordEmbedding {
     private String lang;
     private String dr_lang;
     private Map<String, Float[]> vec_cache = new HashMap<>();
-    private boolean use_mcache = true;
+    private boolean use_mcache = false;
 
     public WordEmbedding() {
         loadStopWords("en");
@@ -119,8 +119,8 @@ public class WordEmbedding {
         multi_vec_lang = multi_db.createTreeMap("lang")
                 .keySerializer(BTreeKeySerializer.STRING)
                 .makeOrGet();
-        multi_vecs.put("en", multi_vec_en);
         multi_vecs.put(lang, multi_vec_lang);
+        multi_vecs.put("en", multi_vec_en);
         if(multi_vec_en.containsKey("obama"))
             dim = multi_vec_en.get("obama").length;
         this.lang = lang;
@@ -279,15 +279,16 @@ public class WordEmbedding {
         cp.getPropValues();
         WordEmbedding we = new WordEmbedding();
         String dir = "/shared/preprocessed/ctsai12/multilingual/cca/";
-        we.loadMultiDBNew("es", true);
-        System.out.println(we.dim);
-        System.exit(-1);
-        String name = "es";
+        String name = "olden";
+//        we.loadMultiDBNew("en", true);
+//        for(float f: we.getTitleVector("barack_obama", "en"))
+//            System.out.println(f);
         we.createMultiVec(name);
 //        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig1_projected.txt", we.multi_vec_en);
 //        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig2_projected.txt", we.multi_vec_lang);
-        we.loadEmbeddingToDB(dir + name+"/en.txt", we.multi_vec_en);
-        we.loadEmbeddingToDB(dir + name+"/"+name+".txt", we.multi_vec_lang);
+        we.loadEmbeddingToDB("/shared/preprocessed/ctsai12/multilingual/vectors/vectors.wikidump-2014", we.multi_vec_en);
+//        we.loadEmbeddingToDB(dir + name+"/en.txt", we.multi_vec_en);
+//        we.loadEmbeddingToDB(dir + name+"/"+name+".txt", we.multi_vec_lang);
 
         we.closeDB();
     }

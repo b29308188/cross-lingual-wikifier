@@ -44,12 +44,12 @@ public class RankerFeatureManager implements Serializable {
     }
 
     public void loadVectors() {
-        if (lang.equals("en")) {
-//            we.setMonoVecsNew("en");
-            we.loadMultiDBNew("es", true);
-        } else {
+//        if (lang.equals("en")) {
+////            we.setMonoVecsNew("en");
+//            we.loadMultiDBNew("es", true);
+//        } else {
             we.loadMultiDBNew(lang, true);
-        }
+//        }
     }
 
     public String getLang() {

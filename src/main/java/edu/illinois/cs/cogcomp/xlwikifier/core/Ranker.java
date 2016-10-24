@@ -7,6 +7,7 @@ import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.WikiCand;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import edu.illinois.cs.cogcomp.indsup.learning.FeatureVector;
+import edu.illinois.cs.cogcomp.xlwikifier.evaluation.EMNLP2013Reader;
 import edu.illinois.cs.cogcomp.xlwikifier.wikipedia.WikiCandidateGenerator;
 import edu.illinois.cs.cogcomp.xlwikifier.wikipedia.WikiDocReader;
 import org.slf4j.Logger;
@@ -15,6 +16,7 @@ import edu.illinois.cs.cogcomp.xlwikifier.freebase.FreeBaseQuery;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
@@ -103,7 +105,7 @@ public class Ranker {
 
     public void writeSVMData(List<QueryDocument> docs, String name)throws IOException {
         System.out.println("Generating svm data...");
-        BufferedWriter bw = new BufferedWriter(new FileWriter("svmdata/tmp"));
+        BufferedWriter bw = new BufferedWriter(new FileWriter("svmdata/tmp1"));
         int mcnt = 0, dcnt = 0, qid = 1;
         for(QueryDocument doc: docs){
             dcnt++;
@@ -113,6 +115,7 @@ public class Ranker {
                 if ((mcnt++) % 100 == 0) System.out.print("===========> processed #docs: "+dcnt +" #mentions: "+mcnt+" <========== \r");
                 ELMention m = doc.mentions.get(i);
                 m.setMidVec(fm.we.getTitleVector(m.gold_wiki_title, m.gold_lang));
+
                 m.prepareFeatures(doc, fm, doc.mentions.subList(0, i));
                 for (WikiCand cand : m.getCandidates()) {
                     String fea = getFeatureString(cand, m, doc, qid);
@@ -136,7 +139,7 @@ public class Ranker {
                 dir.mkdirs();
         }
 
-        executeCmd("liblinear-ranksvm-1.95/train -c 0.01 svmdata/tmp " + name );
+        executeCmd("liblinear-ranksvm-1.95/train -c 0.01 svmdata/tmp1 " + name );
     }
 
     public void setWikiTitleByTopCand(List<QueryDocument> docs){
@@ -155,8 +158,8 @@ public class Ranker {
     }
 
     public void setWikiTitleByModel(List<QueryDocument> docs){
-        logger.info("Ranking...");
-        logger.info("#mentions:"+docs.stream().flatMap(x -> x.mentions.stream()).count());
+//        logger.info("Ranking...");
+//        logger.info("#mentions:"+docs.stream().flatMap(x -> x.mentions.stream()).count());
         int dcnt = 0;
         for(QueryDocument doc: docs) {
             dcnt++;
@@ -245,7 +248,22 @@ public class Ranker {
         ranker.fm.ner_mode = false;
 
         WikiDocReader reader = new WikiDocReader();
-        List<QueryDocument> docs = reader.readWikiDocsNew(lang, 0, n_docs);
+
+        List<QueryDocument> docs = reader.readWikiDocsNew(lang, n_docs);
+
+        // this part is for English evaluation
+        docs = docs.stream().filter(x -> x.mentions.size() > 20).collect(Collectors.toList());
+        EMNLP2013Reader r = new EMNLP2013Reader();
+        for(QueryDocument doc: docs){
+            doc.mentions = doc.mentions.stream().filter(x -> !x.getMention().toLowerCase().equals(x.getMention()))
+                    .collect(Collectors.toList());
+            for(ELMention m: doc.mentions){
+                if(r.redirects.containsKey(m.gold_wiki_title)){
+                    m.gold_wiki_title = r.redirects.get(m.gold_wiki_title);
+                }
+            }
+
+        }
 
         FreeBaseQuery.loadDB(true);
         WikiCandidateGenerator wcg = new WikiCandidateGenerator(true);
@@ -263,7 +281,7 @@ public class Ranker {
 
         String lang = args[0];
 
-        trainRanker(lang, 20000, 0.5, "models/ranker/default/"+lang+"/ranker.model");
+        trainRanker(lang, 200, Integer.MAX_VALUE, "models/ranker/en.2014.3k.f11.ranker.model");
     }
 
 }
