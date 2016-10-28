@@ -144,10 +144,10 @@ public class GazetteerGenerator {
         }
 
         try {
-            FileUtils.writeStringToFile(new File(dir, "per."+lang), per_out, "UTF-8");
-            FileUtils.writeStringToFile(new File(dir, "org."+lang), org_out, "UTF-8");
-            FileUtils.writeStringToFile(new File(dir, "loc."+lang), loc_out, "UTF-8");
-            FileUtils.writeStringToFile(new File(dir, "all."+lang), all_out, "UTF-8");
+            FileUtils.writeStringToFile(new File(dir, "per.pair"), per_out, "UTF-8");
+            FileUtils.writeStringToFile(new File(dir, "org.pair"), org_out, "UTF-8");
+            FileUtils.writeStringToFile(new File(dir, "loc.pair"), loc_out, "UTF-8");
+            FileUtils.writeStringToFile(new File(dir, "all.pair"), all_out, "UTF-8");
         } catch (IOException e) {
             e.printStackTrace();
         }

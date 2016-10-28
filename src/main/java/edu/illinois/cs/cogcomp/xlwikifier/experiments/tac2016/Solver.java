@@ -798,13 +798,13 @@ public class Solver {
 //
 ////        solver.setGoldMid(r.docs, xmldocs);
 
-//        solver.removeQuoteMentions(docs, xmldocs);
-//        solver.wikifyMentions(docs, lang);
+        solver.removeQuoteMentions(docs, xmldocs);
+        solver.wikifyMentions(docs, lang);
         String outfile = "/shared/bronte/tac2015/neleval/2016/zh-2015-1";
-//        solver.printResults(docs, xmldocs, outfile);
+        solver.printResults(docs, xmldocs, outfile);
 
 //        String outfile = "/shared/bronte/tac2015/neleval/2016/zh-eval-all";
-//        solver.combine(outfile);
+        solver.combine(outfile);
 //
 //
         solver.Clustering(outfile, outfile+"-cluster-authors");

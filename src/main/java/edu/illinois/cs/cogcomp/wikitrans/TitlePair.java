@@ -35,7 +35,9 @@ public class TitlePair {
     public void populateAllAssignments(){
         int l = tgt_title.length;
         int m = src_title.length;
+        // (m+1)^l
         List<List<Integer>> assignments = TransUtils.getAllAssignments(l, m+1);  // m+1: adding null alignment
+//        List<List<Integer>> assignments = TransUtils.getAllAssignments(m, l+1); // (l+1)^m
 //        List<List<Integer>> assignments = TransUtils.getAllAssignments(m, l);
         // each word in src can be linked to multiple tgt words
 
@@ -65,15 +67,17 @@ public class TitlePair {
             for (int j = 0; j < m; j++) {
                 String targetwords = "";
                 int n_t = 0;
+                int pre_idx = -1;
                 for (int i = 0; i < l; i++) {
                     if (assign.get(i) == j) {
-                        targetwords += " " + tgt_title[i];
+                        targetwords += tgt_title[i];
                         n_t++;
+                        pre_idx = i;
                     }
                 }
 
                 targetwords = targetwords.trim();
-                if(!targetwords.isEmpty() && (n_t == 1)){ // || (n_t == 2 && targetwords.length() < 10))) {
+                if(!targetwords.isEmpty() && (n_t == 1)){// || (n_t == 2 && targetwords.length() < 10))) {
                     wordpairs.add(new Pair<>(src_title[j], targetwords));
                 }
             }

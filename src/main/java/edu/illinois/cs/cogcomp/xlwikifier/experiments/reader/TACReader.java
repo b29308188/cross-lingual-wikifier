@@ -13,6 +13,7 @@ import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -27,6 +28,7 @@ import static java.util.stream.Collectors.joining;
  * Created by ctsai12 on 5/31/16.
  */
 public class TACReader {
+
 
     public static Map<String, List<String>> readDocs(String dir){
         Map<String, List<String>> ret = new HashMap<>();
@@ -568,10 +570,77 @@ public class TACReader {
         return docs;
     }
 
+    public static void gen2016EvalPlainText(){
+
+        String goldfile = "/shared/corpora/corporaWeb/tac/LDC2016E68_TAC_KBP_2016_Entity_Discovery_and_Linking_Evaluation_Gold_Standard_Entity_Mentions_and_Knowledge_Base_Links/data/tac_kbp_2016_edl_evaluation_gold_standard_entity_mentions.tab";
+
+        MentionReader mr = new MentionReader();
+        List<ELMention> mentions = mr.readGoldMentions(goldfile)
+                .stream()
+                .filter(x -> x.getLanguage().equals("SPA"))
+                .filter(x -> x.getNounType().equals("NAM"))
+                .collect(Collectors.toList());
+
+        Set<String> dids = mentions.stream().map(x -> x.getDocID())
+                .collect(Collectors.toSet());
+
+        System.out.println(dids.size());
+        List<QueryDocument> docs = readSpanish2016EvalDocs(dids);
+        System.out.println(docs.size()+" "+mentions.size());
+
+        String outdir = "/shared/corpora/corporaWeb/tac/EDL2016-eval/docs";
+        for(QueryDocument doc: docs){
+            try {
+                FileUtils.writeStringToFile(new File(outdir, doc.getDocID()), doc.plain_text, "UTF-8");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            List<ELMention> ms = mentions.stream().filter(x -> x.getDocID().equals(doc.getDocID())).collect(Collectors.toList());
+            for(ELMention m: ms){
+                int plain_start=-1, plain_end=-1;
+                for(ELMention t: doc.tokens){
+                    if(t.xml_start == m.getStartOffset())
+                        plain_start = t.plain_start;
+                    if(t.xml_end == m.getEndOffset())
+                        plain_end = t.plain_end;
+                }
+
+                int last_small = doc.xml_text.substring(0, m.getStartOffset()).lastIndexOf("<");
+                int last_large = doc.xml_text.substring(0, m.getStartOffset()).lastIndexOf(">");
+                if(last_small <= last_large && plain_start == -1) {
+                    System.out.println(doc.getDocID() + " " + m.getMention());
+                }
+
+
+//                if(plain_start == -1 && doc.plain_text.contains(m.getMention())){
+//                    System.out.println(doc.getDocID()+" "+m.getMention());
+//                }
+
+            }
+        }
+
+//        String mfile = "/shared/corpora/corporaWeb/tac/EDL2016-eval/NAM.annotation";
+//
+//        String out = "";
+//        for(ELMention m: mentions){
+//            out += m.getDocID()+"\t"+m.getMention()+"\t"+m.plain_start+"\t"+m.plain_end+"\t"+m.getType()+"\t"+m.gold_mid+"\n";
+//        }
+//
+//        try {
+//            FileUtils.writeStringToFile(new File(mfile), out, "UTF-8");
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
+
+    }
+
     public static void main(String[] args) {
 
+        gen2016EvalPlainText();
 //        readSpanish2016EvalDocs();
-        readChinese2016EvalDocs();
+//        readChinese2016EvalDocs();
 //        loadENDocsWithPlainMentions(false);
     }
 }

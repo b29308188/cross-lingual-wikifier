@@ -9,6 +9,7 @@ import edu.illinois.cs.cogcomp.xlwikifier.experiments.reader.WikiDataReader;
 import edu.illinois.cs.cogcomp.xlwikifier.freebase.FreeBaseQuery;
 import edu.illinois.cs.cogcomp.xlwikifier.wikipedia.LangLinker;
 import edu.illinois.cs.cogcomp.xlwikifier.wikipedia.WikiCandidateGenerator;
+import edu.stanford.nlp.parser.dvparser.DVModelReranker;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,7 @@ public class WikiDataWithTransExp {
                     get++;
                 }
                 else{
-                    System.out.println(m.getMention()+" --> "+m.gold_enwiki_title+" "+m.getType());
+                   System.out.println(m.getMention()+" --> "+m.gold_enwiki_title+" "+m.getType());
                 }
                 total++;
             }
@@ -117,7 +118,7 @@ public class WikiDataWithTransExp {
         int cnt = 0, per = 0, loc = 0, org = 0;
         for(QueryDocument doc: docs){
             List<ELMention> filtered = new ArrayList<>();
-            if(cnt++%500 == 0) System.out.println(cnt);
+            if(cnt++%500 == 0) System.out.print(cnt+"\r");
             for(ELMention m: doc.mentions){
                 String mid = FreeBaseQuery.getMidFromTitle(m.gold_enwiki_title, "en");
                 if(mid != null){
@@ -227,25 +228,31 @@ public class WikiDataWithTransExp {
     }
 
     private void setCands(List<QueryDocument> docs, String lang, WikiCandidateGenerator wcg){
-        List<ELMention> mentions = docs.stream().flatMap(x -> x.mentions.stream()).collect(toList());
         System.out.println("Querying en cands by foreign mentions...");
-        for(ELMention m: mentions){
-            List<WikiCand> cands = wcg.getCandsBySurface(m.getMention().toLowerCase(), "en", false);
-            cands.addAll(wcg.getCandidateByWord(m.getMention().toLowerCase(), "en", 10));
-            m.getCandidates().addAll(cands);
+        int cnt = 0;
+        for(QueryDocument doc: docs) {
+            System.out.print((cnt++)+"\r");
+            for (ELMention m : doc.mentions) {
+//                System.out.println(m.getMention());
+                List<WikiCand> cands = wcg.getCandsBySurface(m.getMention().toLowerCase(), "en", false);
+//                cands.addAll(wcg.getCandidateByWord(m.getMention().toLowerCase(), "en", 10));
+                m.getCandidates().addAll(cands);
+            }
         }
         System.out.println("Querying en cands by transliteration...");
         int c = 0;
-        for(ELMention m: mentions){
-            if(c++%10 == 0) System.out.print(c+"\r");
+        for(QueryDocument doc: docs) {
+            for (ELMention m : doc.mentions) {
+                if (c++ % 10 == 0) System.out.print(c + "\r");
 
 //            if(m.getCandidates().size() == 0) {
-                List<WikiCand> cands = wcg.getCandsByTransliteration(m.getMention(), lang);
+                List<WikiCand> cands = wcg.getCandsByTransliteration(m.getMention(), lang, m.getType().toLowerCase());
                 m.getCandidates().addAll(cands);
 //            }
+            }
         }
 
-        System.out.println("#tokens need transliterate "+wcg.trans.ntrans);
+//        System.out.println("#tokens need transliterate "+wcg.trans.ntrans);
     }
 
     public static void main(String[] args) {

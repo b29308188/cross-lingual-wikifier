@@ -46,7 +46,7 @@ public class GenWikifierFeatures {
      */
     public void genWikifiedCache(List<QueryDocument> docs, String lang, String name){
         logger.info("Generating wikifier cache...");
-        Ranker ranker = Ranker.loadPreTrainedRanker(lang, "ranker/ner/"+lang);
+        Ranker ranker = Ranker.loadPreTrainedRanker(lang, "models/ranker/ner/"+lang+"/ranker.model");
         WikiCandidateGenerator wcg = new WikiCandidateGenerator(true);
         utils.setLang(lang);
         String dir = "/shared/bronte/ctsai12/multilingual/2015data/"+lang+"/"+name+"/";
@@ -114,13 +114,13 @@ public class GenWikifierFeatures {
         FreeBaseQuery.loadDB(true);
         GenWikifierFeatures ce = new GenWikifierFeatures();
 
-        String lang = "zh";
+        String lang = "ta";
 
         ColumnFormatReader reader = new ColumnFormatReader();
-        String cachename = "tac2015-train12-char-prop";
+        String cachename = "fire-train";
 //        String cachename = "ere-NOM-head";
-        String in_dir = "/shared/corpora/ner/tac/zh/train-new12-char-prop";
-//        String in_dir = "/shared/corpora/ner/ere/es/NOM-head";
+//        String in_dir = "/shared/corpora/ner/parallel/"+lang+"/Train-edit/";
+        String in_dir = "/shared/corpora/ner/fire/tamil_train-conll";
         reader.readDir(in_dir, false);
         ce.genWikifiedCache(reader.docs, lang, cachename);
 

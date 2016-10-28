@@ -218,8 +218,8 @@ public class Importer {
 
         Importer importer = new Importer(args[0], args[1]);
         try {
-            importer.downloadDump();
-            importer.parseWikiDump();
+//            importer.downloadDump();
+//            importer.parseWikiDump();
             importer.importLangLinks();
             importer.importCandidates();
             importer.importTFIDF();

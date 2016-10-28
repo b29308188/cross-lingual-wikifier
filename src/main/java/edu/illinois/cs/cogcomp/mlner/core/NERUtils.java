@@ -286,7 +286,7 @@ public class NERUtils {
 
     public void genNERTrainingCache(List<QueryDocument> docs, String dir, int n, WikiCandidateGenerator wcg, Ranker ranker){
         System.out.println("#docs "+docs.size());
-        int n_thread = 10;
+        int n_thread = 5;
         executor = Executors.newFixedThreadPool(n_thread);
         for(int i = 0; i < docs.size(); i++){
             QueryDocument doc = docs.get(i);

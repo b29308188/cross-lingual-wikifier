@@ -155,8 +155,10 @@ public class WordEmbeddingFloat {
     }
 
     public void loadMultiDBNew(String lang) {
-        logger.info("Loading "+lang+" multi vectors...");
-        File f = new File(Constants.dbpath1, "multi-embeddings/"+lang+"/"+lang);
+        File f;
+
+        logger.info("Loading " + lang + " multi vectors...");
+        f = new File(Constants.dbpath1, "multi-embeddings/" + lang + "/" + lang);
         multi_db = DBMaker.newFileDB(f)
                 .cacheSize(100000)
                 .transactionDisable()
@@ -432,10 +434,10 @@ public class WordEmbeddingFloat {
 		String name = args[0];
 //        String name = "es";
         we.createMultiVec(name);
-//        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig1_projected.txt", we.multi_vec_en);
-//        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig2_projected.txt", we.multi_vec_lang);
-        we.loadEmbeddingToDB(dir + name+"/en.txt", we.multi_vec_en);
-        we.loadEmbeddingToDB(dir + name+"/"+name+".txt", we.multi_vec_lang);
+        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig1_projected.txt", we.multi_vec_en);
+        we.loadEmbeddingToDB(dir + name+"/en"+name+"_orig2_projected.txt", we.multi_vec_lang);
+//        we.loadEmbeddingToDB(dir + name+"/en.txt", we.multi_vec_en);
+//        we.loadEmbeddingToDB(dir + name+"/"+name+".txt", we.multi_vec_lang);
 
         we.closeDB();
     }

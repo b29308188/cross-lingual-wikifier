@@ -3,6 +3,7 @@ package edu.illinois.cs.cogcomp.xlwikifier.wikipedia;
 import edu.illinois.cs.cogcomp.core.io.LineIO;
 import edu.illinois.cs.cogcomp.tokenizers.MultiLingualTokenizer;
 import edu.illinois.cs.cogcomp.tokenizers.Tokenizer;
+import edu.illinois.cs.cogcomp.wikitrans.TitleTranslator;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.ELMention;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.WikiCand;
@@ -52,6 +53,7 @@ public class WikiCandidateGenerator {
     public Transliterator tli;
     private Tokenizer tokenizer;
     public Transliterator trans;
+    public TitleTranslator titletrans;
     private TransLookUp trlu;
     private static Logger logger = LoggerFactory.getLogger(WikiCandidateGenerator.class);
 
@@ -75,8 +77,8 @@ public class WikiCandidateGenerator {
         this.lang = lang;
         if(db_pool.containsKey(lang)) db = db_pool.get(lang);
         else {
-            String dbfile = Constants.dbpath1+"/candidates/"+lang+"_candidates";
-//            String dbfile = "/shared/preprocessed/ctsai12/multilingual/mapdb/candidates/"+lang+"_candidates";
+//            String dbfile = Constants.dbpath1+"/candidates/"+lang+"_candidates";
+            String dbfile = "/shared/preprocessed/ctsai12/multilingual/mapdb/candidates/"+lang+"_candidates";
 			/*
             if(new File(dbfile).exists()){
                 logger.info("cand db exists "+dbfile);
@@ -206,10 +208,15 @@ public class WikiCandidateGenerator {
         return ret;
     }
 
-    public List<WikiCand> getCandsByTransliteration(String surface, String lang){
-        if(trans == null){
-            trans = new Transliterator(lang);
-//            trlu = new TransLookUp(lang);
+    public List<WikiCand> getCandsByTransliteration(String surface, String lang, String type){
+//        if(trans == null){
+//            trans = new Transliterator(lang);
+////            trlu = new TransLookUp(lang);
+//        }
+        if(titletrans == null){
+            titletrans = new TitleTranslator();
+            titletrans.loadJointModels(lang);
+//            titletrans.loadBaselineModels(lang);
         }
         surface = surface.toLowerCase();
 
@@ -217,16 +224,18 @@ public class WikiCandidateGenerator {
             return copyFromCache(surface);
         }
 
-        String tran;
+//        String tran;
         Set<String> poss_tran = new HashSet<>();
-        tran = trans.LookupPhraseMap(surface);
+//        tran = trans.LookupPhraseMap(surface);
+        List<String> tran = titletrans.generatePhrase(surface, type);
 //        tran = trlu.LookupTrans(surface);
-        if(tran!=null){
-            poss_tran.add(tran);
-        }
-        else {
-            poss_tran.addAll(trans.getEngTransCands(surface));
-        }
+//        if(tran!=null){
+//            poss_tran.add(tran);
+//        }
+//        else {
+//            poss_tran.addAll(trans.getEngTransCands(surface));
+//        }
+        poss_tran.addAll(tran);
         poss_tran = poss_tran.stream().filter(x -> !x.trim().isEmpty()).collect(Collectors.toSet());
         List<WikiCand> cands = new ArrayList<>();
         poss_tran.forEach(x -> cands.addAll(getCandidate1(x, "en")));
@@ -820,8 +829,9 @@ public class WikiCandidateGenerator {
     public static void main(String[] args) {
         WikiCandidateGenerator g = new WikiCandidateGenerator();
         g.tac = true;
-        g.loadDB("en");
-        System.out.println(g.getCandsBySurface("Michael Pettis", "en", false));
+        g.loadDB("zh");
+//        System.out.println(g.getCandsBySurface("barack obama", "en", false));
+        System.out.println(g.getCandsBySurface("海尔堡大学", "zh", false));
         System.exit(-1);
 
         String lang = "en";
