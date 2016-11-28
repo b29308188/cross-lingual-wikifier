@@ -68,7 +68,7 @@ public class NERUtils {
             extractNERFeatures(doc, n);
             prevm = doc.mentions;
         }
-//        logger.info("Done");
+        logger.info("Done");
     }
 
     public void extractNERFeatures(QueryDocument doc, int n) {

@@ -81,7 +81,7 @@ public class CrossLingualWikifier extends Annotator {
     @Override
     public void addView(TextAnnotation textAnnotation) {
 
-        if (!textAnnotation.hasView(language.getNERViewName())) {
+        if (!textAnnotation.hasView(language.getNgramViewName())) {
             logger.error(language.getNERViewName() + " is required");
         }
 
@@ -142,7 +142,7 @@ public class CrossLingualWikifier extends Annotator {
         QueryDocument doc = new QueryDocument(textAnnotation.getId());
         doc.setTextAnnotation(textAnnotation);
         doc.text = textAnnotation.getText();
-        for (Constituent c : textAnnotation.getView(language.getNERViewName())) {
+        for (Constituent c : textAnnotation.getView(language.getNgramViewName())) {
             ELMention m = new ELMention("", c.getStartCharOffset(), c.getEndCharOffset());
             m.setSurface(c.getSurfaceForm());
             m.setType(c.getLabel());

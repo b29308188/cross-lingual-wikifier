@@ -18,11 +18,13 @@ public enum Language {
 
     private String NER_VIEW;
     private String WIKI_VIEW;
+    private String NGRAM_VIEW;
     private String short_name;
 
     Language(String lang) {
         NER_VIEW = lang + "_NER";
         WIKI_VIEW = lang + "_WIKIFIER";
+        NGRAM_VIEW = lang + "_NGRAM";
         short_name = lang.toLowerCase();
     }
 
@@ -32,6 +34,10 @@ public enum Language {
 
     public String getNERViewName() {
         return NER_VIEW;
+    }
+
+    public String getNgramViewName() {
+        return NGRAM_VIEW;
     }
 
     public String getWikifierViewName() {

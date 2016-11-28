@@ -105,8 +105,8 @@ public class XLWikifierDemo {
     }
 
     public static void main(String[] args) {
-        String text = "Louis van Gaal , Endonezya maçı sonrasında oldukça ses getirecek açıklamalarda bulundu .";
-        String lang = "tr";
+        String text = "The Chicago Cubs are an American professional baseball team based in Chicago, Illinois. The Cubs compete in Major League Baseball (MLB) as a member club of the National League (NL) Central division, where they are the defending World Series Champions.";
+        String lang = "en";
 //        text = "Paul Kantor teaches information science at Rutgers University";
         XLWikifierDemo result = new XLWikifierDemo(text, lang);
         System.out.println(result.getOutput());

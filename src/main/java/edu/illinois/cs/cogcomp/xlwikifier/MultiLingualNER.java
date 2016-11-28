@@ -137,7 +137,6 @@ public class MultiLingualNER extends Annotator {
 
         // use the language-specific parameters and brown clusters
         ParametersForLbjCode.currentParameters = this.parameters;
-        BrownClusters.set(brownclusters);
 //        GazetteersFactory.set(gazetteers);
 
         // Wikify all n-grams and extract features based on Wikipedia titles
