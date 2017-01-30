@@ -188,6 +188,8 @@ public class WikiCandidateGenerator {
             cands.add(cand);
 
         }
+        //for(WikiCand c : cands)
+            //System.out.println(c.title);
         return cands;
     }
 

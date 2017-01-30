@@ -61,7 +61,7 @@ public class Ngram extends Annotator {
      */
     public Ngram(Language lang, String configFile) throws IOException {
         super(lang.getNgramViewName(), new String[]{}, true, new ResourceManager(configFile));
-        System.out.println(lang.getNgramViewName());
+        //System.out.println(lang.getNgramViewName());
         this.language = lang;
 
         // set all config properties of cross-lingual wikifier

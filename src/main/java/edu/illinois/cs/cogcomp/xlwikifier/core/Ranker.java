@@ -272,7 +272,7 @@ public class Ranker {
     }
 
     public static void main(String[] args) {
-
+        System.out.println("123");
         if(args.length < 3)
             logger.error("Require 3 arguments");
 

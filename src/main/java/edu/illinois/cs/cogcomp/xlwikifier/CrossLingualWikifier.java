@@ -95,7 +95,7 @@ public class CrossLingualWikifier extends Annotator {
 
         SurfaceClustering.cluster(doc);
 
-        doc.mentions.forEach(x -> System.out.println(x));
+        //doc.mentions.forEach(x -> System.out.println(x));
 
         CoreferenceView corefview = new CoreferenceView(getViewName(), textAnnotation);
 
