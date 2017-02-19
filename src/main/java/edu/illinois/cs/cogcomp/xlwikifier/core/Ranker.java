@@ -32,6 +32,7 @@ public class Ranker {
 
     }
 
+
     public Ranker(String lang) {
         fm = new RankerFeatureManager(lang);
     }
@@ -108,7 +109,8 @@ public class Ranker {
         try {
             writeSVMData(docs, train_file);
             trainSVM(train_file, modelname);
-            FileUtils.forceDelete(new File(train_file));
+            System.out.println(train_file);
+            //FileUtils.forceDelete(new File(train_file));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -190,8 +192,10 @@ public class Ranker {
         doc.prepareFeatures(fm);
         for (int i = 0; i < doc.mentions.size(); i++) {
             ELMention m = doc.mentions.get(i);
+            //System.out.println("Prepare features...");
             m.prepareFeatures(doc, fm, doc.mentions.subList(0, i));
             List<WikiCand> cands = m.getCandidates();
+            //System.out.println("Ranking...");
             for (WikiCand cand : cands) {
                 double score = getScoreByModel(m, cand, doc);
                 cand.setScore(score);
@@ -266,7 +270,7 @@ public class Ranker {
         WikiCandidateGenerator wcg = new WikiCandidateGenerator(lang, true);
         wcg.genCandidates(docs);
         wcg.selectMentions(docs, ratio);
-        ranker.train(docs, modelfile);
+         ranker.train(docs, modelfile);
         ranker.saveLexicalManager(modelfile + ".lm");
         return ranker;
     }
