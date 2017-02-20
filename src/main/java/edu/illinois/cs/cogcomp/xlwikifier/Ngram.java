@@ -115,62 +115,47 @@ public class Ngram extends Annotator {
      * @return
      */
     public void annotate(QueryDocument doc) {
+        Set<String> stops = StopWord.getStopWords("en");
 
-        for(Constituent c : doc.getTextAnnotation().getView("SHALLOW_PARSE")){
-            List<String> words = Arrays.asList(c.getSurfaceForm().split("\\s+"));
-            Set<String> stops = StopWord.getStopWords("en");
-            List<String> tokens = new ArrayList<String>();
-            for(String s : words)
-                if(!stops.contains(s.toLowerCase()))
-                    tokens.add(s);
-            int total_size = tokens.size();
-            for(int n = total_size; n > 0 ; n --){
-                int tokens_size = tokens.size();
-                for(int base = 0; base < tokens_size - n + 1 ; base++){
-                    String text = String.join(" ", tokens.subList(base, base+n));
-                    ELMention m = new ELMention(""
-                            , c.getStartCharOffset() + c.getSurfaceForm().indexOf(tokens.get(base)),
-                            c.getStartCharOffset() + c.getSurfaceForm().indexOf(tokens.get(base+n-1)) + tokens.get(base+n-1).length());// -1?
+        for (Constituent chunk : doc.getTextAnnotation().getView("SHALLOW_PARSE")) {
+
+            //Get POS for each token in the chunk
+            List<Constituent> words = doc.getTextAnnotation().getView("POS").getConstituentsCovering(chunk);
+
+            //Remove stop words
+            List<Constituent> tokens = new ArrayList<Constituent>();
+            for (Constituent c : words)
+                if (!stops.contains(c.getSurfaceForm().toLowerCase()))
+                    tokens.add(c);
+
+            //Detect mentions
+            List<Boolean> used = Arrays.asList(new Boolean[tokens.size()]);//record whether the token is used
+            for (int n = tokens.size(); n > 0; n--) {//from long to short
+                for (int base = 0; base < tokens.size() - n + 1; base++) {//slide over the tokens
+                    if(used.subList(base, base+n).contains(true))// overlapping
+                        continue;
+                    List<Boolean> tmp = used.subList(base, base+n);
+                    List<String> ts = new ArrayList<String>();
+                    tokens.subList(base, base + n).forEach(x -> ts.add(x.getSurfaceForm()));
+                    String text = String.join(" ", ts);//the surface text
+                    ELMention m = new ELMention("", tokens.get(base).getStartCharOffset(),
+                            tokens.get(base + n-1).getEndCharOffset());
                     m.setSurface(text);
                     nerutils.wikifyMention(m, n);
-                    if (m.getCandidates().size() > 0){
-                        doc.mentions.add(m);
+                    if (m.getCandidates().size() > 0){//have candidates
+                        boolean isNoun = false;
                         for(int i = base+n -1; i >= base; i --)
-                            tokens.remove(i);
-                        n++;
-                        break;
+                            if(tokens.get(i).getLabel().startsWith("N"))
+                                isNoun = true;
+                        if(isNoun){
+                            doc.mentions.add(m);
+                            for(int i = base+n -1; i >= base; i --)
+                                used.set(i, true);
+                        }
                     }
                 }
             }
-            /*
-
-            ELMention m = new ELMention("", c.getStartCharOffset(), c.getEndCharOffset());
-            m.setSurface(c.getSurfaceForm());
-            for(int n = 4; n > 0; n--) {
-                nerutils.wikifyMention(m, n);
-                if (m.getCandidates().size() > 0){
-                    doc.mentions.add(m);
-                    break;
-                }
-            }
-            */
         }
-
-        /*
-        ParametersForLbjCode.currentParameters = this.parameters;
-        for (int n = 4; n > 0; n--){
-            List<ELMention> mentions = nerutils.getNgramMentions(doc, n);
-            for (int j = 0; j < mentions.size(); j++){
-                ELMention m = mentions.get(j);
-                nerutils.wikifyMention(m, n);
-                if(m.getCandidates().size() > 0)
-                    doc.mentions.add(m);
-            }
-        }
-        */
-        //nerutils.wikifyNgrams(doc);
-        //doc.mentions = nerutils.getNgramMentions(doc, n);
-
+        //doc.mentions.forEach(x -> System.out.println(x.getSurface()));
     }
-
 }

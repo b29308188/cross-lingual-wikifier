@@ -22,7 +22,7 @@ public class XLWikifierDemo {
     private String output;
     private String runtime;
 
-    private String default_config = "config/xlwikifier-demo.config";
+    private String default_config = "config/test.config";
     private static Logger logger = LoggerFactory.getLogger(XLWikifierDemo.class);
 
     public XLWikifierDemo(String text, String language) {

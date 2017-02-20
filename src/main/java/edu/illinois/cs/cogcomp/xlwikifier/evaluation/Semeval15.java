@@ -148,7 +148,11 @@ public class Semeval15 {
         double candHit = 0; //Candidate Generation
         double rankerHit = 0; // Ranker Accuracy
         SEMention goldm;
+        Set<String> bag_gold_titles = new HashSet<String>();
+        Set<String> bag_titles = new HashSet<String>();
+        for(int offset : goldMap.keySet()) bag_gold_titles.add(goldMap.get(offset).gold_title);
         for(ELMention m : xlwikifier.result.mentions){
+            bag_titles.add(m.getWikiTitle());
             if(goldMap.containsKey(m.getStartOffset())){
                 boolean inCand = false;
                 mentionStartHit += 1;
@@ -177,21 +181,24 @@ public class Semeval15 {
                 else
                     System.out.printf("--> endOffset mistake: Gold mention should be:%s\n", text.substring(goldm.startOffset, goldm.endOffset));
             }
-            //else
-                //System.out.printf("%s is not in gold mentions (start offset)\n", m.getSurface());
+            else
+            System.out.printf("Mention:%s  / Predicted:%s / Gold: Not in Gold\n",
+                    m.getSurface(), m.getWikiTitle());
 
         }
         System.out.println("Not Discovered Mentions: ");
         for(SEMention m: goldMentions)
             if(!m.discovered)
-                System.out.printf("%s ", text.substring(m.startOffset, m.endOffset));
+                System.out.printf("%s ;", text.substring(m.startOffset, m.endOffset));
         System.out.println("");
         System.out.printf("Mention Starting Recall = %f\n", mentionStartHit/goldMap.size());
         System.out.printf("Mention Recall = %f\n", mentionHit/goldMap.size());
         System.out.printf("Candidate Generation Recall = %f\n", candHit/mentionHit);
         System.out.printf("Ranker Accuracy = %f\n", rankerHit/candHit);
         System.out.printf("End System Accuracy = %f\n", rankerHit/goldMap.size());
-
+        bag_titles.retainAll(bag_gold_titles);
+        System.out.printf("End System Coverage (Bag of Title) = %f\n",
+                (float)bag_titles.size()/bag_gold_titles.size());
     }
     public Semeval15(String dataFile, String keyFile){
         readIDs(keyFile);
