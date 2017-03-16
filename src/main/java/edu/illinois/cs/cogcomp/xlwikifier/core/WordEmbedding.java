@@ -183,6 +183,7 @@ public class WordEmbedding {
 
     // TODO: fix the cache
     public float[] getVector(String query, String lang) {
+        use_mcache = false;
         if (use_mcache && vec_cache.containsKey(query))
             return vec_cache.get(query);
 
@@ -191,6 +192,7 @@ public class WordEmbedding {
             if (use_mcache) vec_cache.put(query, null);
             return null;
         }
+
 
         float[] vec = multi_vecs.get(lang).get(query);
         if (use_mcache) vec_cache.put(query, vec);

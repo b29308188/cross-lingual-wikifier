@@ -12,15 +12,6 @@ import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomi
  */
 @SpringBootApplication
 public class Application {
-    @Controller
-    public class ServletConfig {
-        @Bean
-        public EmbeddedServletContainerCustomizer containerCustomizer() {
-            return (container -> {
-                container.setPort(8303);
-            });
-        }
-    }
     public static void main(String[] args) {
         SpringApplication.run(Application.class, args);
     }

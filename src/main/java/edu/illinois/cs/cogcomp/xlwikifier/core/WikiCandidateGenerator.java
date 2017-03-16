@@ -138,7 +138,6 @@ public class WikiCandidateGenerator {
 
             if (m.getCandidates().size() == 0) {
                 List<WikiCand> cands = genCandidate(m.getSurface());
-
                 cands = cands.subList(0, Math.min(top, cands.size()));
                 m.getCandidates().addAll(cands);
             }
@@ -150,8 +149,10 @@ public class WikiCandidateGenerator {
 
         List<WikiCand> cands = getCandsBySurface(surface);
         if (cands.size() == 0) {
-            if (word_search)
-                cands = getCandidateByWord(surface, 6);
+            if (word_search){
+                System.out.println("Get candidates by word : " + surface);
+                cands = getCandidateByWord(surface, 10);
+            }
             if (!lang.equals("en") && en_search)
                 cands = en_generator.getCandsBySurface(surface);
         }
@@ -170,23 +171,46 @@ public class WikiCandidateGenerator {
 
         List<WikiCand> cands = new ArrayList<>();
         NavigableMap<Object[], Float> ctitles = p2t2prob.subMap(new Object[]{surface}, new Object[]{surface, null});
-
         List<Map.Entry<Object[], Float>> sorted_cands = ctitles.entrySet().stream().sorted((x1, x2) -> Float.compare(x2.getValue(), x1.getValue()))
                 .collect(Collectors.toList()).subList(0, Math.min(ctitles.size(), top));
 
+        boolean naiveCand = false;
+        List<String> allTitleSet= new ArrayList<>();
+        for(Map.Entry<Object[], Float> c : ctitles.entrySet()){
+            allTitleSet.add((String) c.getKey()[1]);
+        }
         for (Map.Entry<Object[], Float> c : sorted_cands) {
             String title = (String) c.getKey()[1];
-            int dist = getEditDistance(title, surface);
-            double s = 1;
-            if (dist != 0) s = 1.0 / dist;
+            //int dist = getEditDistance(title, surface);
+            double s = c.getValue();
+            //if (dist != 0) s = 1.0 / dist;
+            //System.out.println(title + ":" + s);
             WikiCand cand = new WikiCand(title, s);
+            if(title.endsWith("_(disambiguation)"))
+                continue;
             cand.psgivent = t2p2prob.get(new Object[]{title, surface});
             cand.ptgivens = c.getValue();
             cand.lang = lang;
             cand.src = "surface";
             cand.query_surface = surface;
+            if(title.equals(surface)) {
+                naiveCand = true;
+                cand.setScore(1);
+            }
             cands.add(cand);
-
+        }
+        if(!naiveCand){
+            String title = surface.replace(" ", "_");
+            if(allTitleSet.contains(title)) {
+                WikiCand cand = new WikiCand(title, 1);
+                cand.psgivent = 1;
+                cand.ptgivens = 1;
+                cand.lang = lang;
+                cand.src = "surface";
+                cand.query_surface = surface;
+                //System.out.println("Add: "+ title);
+                cands.add(cand);
+            }
         }
         //for(WikiCand c : cands)
             //System.out.println(c.title);
@@ -510,11 +534,13 @@ public class WikiCandidateGenerator {
             List<ELMention> hard = doc.mentions.stream().filter(x -> x.getCandidates().size() == 0
                     || !x.getCandidates().get(0).getTitle().toLowerCase().equals(x.gold_wiki_title.toLowerCase()))
                     .collect(toList());
+            //List<ELMention> hard = doc.mentions.stream().filter(x -> x.getCandidates().size() > 4).collect(toList());
             hard.forEach(x -> x.eazy = false);
             hard_all.addAll(hard);
             List<ELMention> easy = doc.mentions.stream().filter(x -> x.getCandidates().size() > 0
                     && x.getCandidates().get(0).getTitle().toLowerCase().equals(x.gold_wiki_title.toLowerCase()))
                     .collect(toList());
+            //List<ELMention> easy = doc.mentions.stream().filter(x -> x.getCandidates().size() <= 4).collect(toList());
             easy.forEach(x -> x.eazy = true);
             easy_all.addAll(easy);
 

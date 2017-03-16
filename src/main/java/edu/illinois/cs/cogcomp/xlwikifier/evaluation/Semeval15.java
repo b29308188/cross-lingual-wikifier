@@ -130,9 +130,10 @@ public class Semeval15 {
 
         /*ChunkerAnnotator*/
         System.out.println("Add Chunking...");
-        ChunkerAnnotator ca = new ChunkerAnnotator(true);
-        ca.initialize(new ChunkerConfigurator().getDefaultConfig());
-        ca.addView(ta);
+        annotator.addView(ta, ViewNames.SHALLOW_PARSE);
+        //ChunkerAnnotator ca = new ChunkerAnnotator(true);
+        //ca.initialize(new ChunkerConfigurator().getDefaultConfig());
+        //ca.addView(ta);
 
         System.out.println("Wikification...");
         Ngram ngram = new Ngram(lang, default_config);
@@ -147,6 +148,9 @@ public class Semeval15 {
         double mentionHit = 0; //Mention detection
         double candHit = 0; //Candidate Generation
         double rankerHit = 0; // Ranker Accuracy
+        int oneCandCnt = 0;
+        double candSum = 0;
+        int easy = 0;
         SEMention goldm;
         Set<String> bag_gold_titles = new HashSet<String>();
         Set<String> bag_titles = new HashSet<String>();
@@ -162,6 +166,11 @@ public class Semeval15 {
                         m.getSurface(), m.getWikiTitle(), goldm.gold_title);
                 if(goldm.endOffset == m.getEndOffset()) {
                     mentionHit += 1;
+                    if(m.getCandidates().size() == 1)
+                        oneCandCnt += 1;
+                    if(m.getCandidates().get(0).orig_title.equals(goldm.gold_title))
+                        easy += 1;
+                    candSum += m.getCandidates().size();
                     for(WikiCand c : m.getCandidates()){
                         if(c.orig_title.equals(goldm.gold_title)){
                             candHit += 1;
@@ -194,6 +203,9 @@ public class Semeval15 {
         System.out.printf("Mention Starting Recall = %f\n", mentionStartHit/goldMap.size());
         System.out.printf("Mention Recall = %f\n", mentionHit/goldMap.size());
         System.out.printf("Candidate Generation Recall = %f\n", candHit/mentionHit);
+        System.out.printf("Average # of candidates = %f\n", candSum/mentionHit);
+        System.out.printf("# of detected & gold mentions only have candidates= %d\n", oneCandCnt);
+        System.out.printf("# of detected & gold mentions that links to their majority = %d\n", easy);
         System.out.printf("Ranker Accuracy = %f\n", rankerHit/candHit);
         System.out.printf("End System Accuracy = %f\n", rankerHit/goldMap.size());
         bag_titles.retainAll(bag_gold_titles);
@@ -211,5 +223,6 @@ public class Semeval15 {
         String dataFile = "./data/SemEval-2015-task-13-v1.0/data/semeval-2015-task-13-en.xml";
         Semeval15 evaluator = new Semeval15(dataFile, keyFile);
         evaluator.evaluate();
+        System.out.println("85e");
     }
 }

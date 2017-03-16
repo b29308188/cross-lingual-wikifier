@@ -1,18 +1,19 @@
 package edu.illinois.cs.cogcomp.demo;
 
-import com.github.stuxuhai.jpinyin.ChineseHelper;
 import edu.illinois.cs.cogcomp.core.datastructures.textannotation.TextAnnotation;
-import edu.illinois.cs.cogcomp.tokenizers.MultiLingualTokenizer;
-import edu.illinois.cs.cogcomp.tokenizers.Tokenizer;
 import edu.illinois.cs.cogcomp.xlwikifier.CrossLingualWikifier;
 import edu.illinois.cs.cogcomp.xlwikifier.CrossLingualWikifierManager;
-import edu.illinois.cs.cogcomp.xlwikifier.MultiLingualNER;
-import edu.illinois.cs.cogcomp.xlwikifier.MultiLingualNERManager;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.ELMention;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.Language;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import edu.illinois.cs.cogcomp.annotation.AnnotatorService;
+import edu.illinois.cs.cogcomp.chunker.main.ChunkerAnnotator;
+import edu.illinois.cs.cogcomp.chunker.main.ChunkerConfigurator;
+import edu.illinois.cs.cogcomp.core.datastructures.ViewNames;
+import edu.illinois.cs.cogcomp.xlwikifier.*;
+import edu.illinois.cs.cogcomp.curator.CuratorFactory;
 
 /**
  * Created by ctsai12 on 4/25/16.
@@ -26,26 +27,33 @@ public class XLWikifierDemo {
     private static Logger logger = LoggerFactory.getLogger(XLWikifierDemo.class);
 
     public XLWikifierDemo(String text, String language) {
+        language = "en";
         Language lang = Language.getLanguage(language);
+        //Tokenizer tokenizer = MultiLingualTokenizer.getTokenizer(language);
+        //TextAnnotation ta = tokenizer.getTextAnnotation(text);
 
-        Tokenizer tokenizer = MultiLingualTokenizer.getTokenizer(language);
-        if(language.equals("zh"))
-            text = ChineseHelper.convertToSimplifiedChinese(text);
-        TextAnnotation ta = tokenizer.getTextAnnotation(text);
+        try{
+        /*Create textannotation*/
+            AnnotatorService annotator = CuratorFactory.buildCuratorClient();
+            TextAnnotation ta = annotator.createBasicTextAnnotation("corpus", "id", text);
 
-        long startTime = System.currentTimeMillis();
-        MultiLingualNER mlner = MultiLingualNERManager.buildNerAnnotator(lang, default_config);
-        mlner.addView(ta);
-        double totaltime = (System.currentTimeMillis() - startTime) / 1000.0;
-        logger.info("Time " + totaltime + " secs");
+            /*Add part-of-speech*/
+            annotator.addView(ta, ViewNames.POS);
 
-        startTime = System.currentTimeMillis();
-        CrossLingualWikifier xlwikifier = CrossLingualWikifierManager.buildWikifierAnnotator(lang, default_config);
-        xlwikifier.addView(ta);
-        totaltime = (System.currentTimeMillis() - startTime) / 1000.0;
-        logger.info("Time " + totaltime + " secs");
 
-        output = formatOutput(xlwikifier.result, language);
+            /*ChunkerAnnotator*/
+            annotator.addView(ta, ViewNames.SHALLOW_PARSE);
+            //ChunkerAnnotator ca = new ChunkerAnnotator(true);
+            //ca.initialize(new ChunkerConfigurator().getDefaultConfig());
+            //ca.addView(ta);
+            Ngram ngram = new Ngram(lang, default_config);
+            ngram.addView(ta);
+            CrossLingualWikifier xlwikifier = CrossLingualWikifierManager.buildWikifierAnnotator(lang, default_config);
+            xlwikifier.addView(ta);
+            output = formatOutput(xlwikifier.result, language);
+        }catch(Exception ex){
+            ex.printStackTrace();
+        }
     }
 
     /**
@@ -93,7 +101,8 @@ public class XLWikifierDemo {
             }
             tmp += "_";
         }
-        return tmp.substring(0, tmp.length() - 1);
+        //return tmp.substring(0, tmp.length() - 1);
+        return tmp.substring(0, tmp.length() - 1).toLowerCase();
     }
 
     public String getOutput() {

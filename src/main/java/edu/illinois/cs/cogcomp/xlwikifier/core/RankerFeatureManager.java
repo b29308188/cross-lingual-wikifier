@@ -235,8 +235,10 @@ public class RankerFeatureManager implements Serializable {
 
 
     public float[] getWeightedVectorFromWords(List<String> words, String lang) {
+        /*
+        System.out.println("Before getting weights");
         Map<String, Float> w2tfidf = tfidf.getWordWeights(words, lang);
-
+        System.out.println("After getting weights");
         List<float[]> vecs = new ArrayList<>();
         List<Float> weights = new ArrayList<>();
         for (String w : w2tfidf.keySet()) {
@@ -247,6 +249,15 @@ public class RankerFeatureManager implements Serializable {
             }
         }
         float[] ret = we.averageVectors(vecs, weights);
+        */
+        List<float[]> vecs = new ArrayList<>();
+        for (String w : words){
+            float[] vec = we.getWordVector(w, lang);
+            if (vec != null) {
+                vecs.add(vec);
+            }
+        }
+        float[] ret = we.averageVectors(vecs);
         return ret;
 
     }

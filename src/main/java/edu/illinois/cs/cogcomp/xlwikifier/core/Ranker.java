@@ -192,15 +192,16 @@ public class Ranker {
         doc.prepareFeatures(fm);
         for (int i = 0; i < doc.mentions.size(); i++) {
             ELMention m = doc.mentions.get(i);
-            //System.out.println("Prepare features...");
+            //System.out.println("Prepare features for ..." + m.getSurface());
             m.prepareFeatures(doc, fm, doc.mentions.subList(0, i));
+            //System.out.println("Get candidates...");
             List<WikiCand> cands = m.getCandidates();
-            //System.out.println("Ranking...");
+            //System.out.println("Get Scores...");
             for (WikiCand cand : cands) {
                 double score = getScoreByModel(m, cand, doc);
                 cand.setScore(score);
             }
-
+            //System.out.println("Set Scores...");
             if (cands.size() > 0) {
                 cands = cands.stream().sorted((x1, x2) -> Double.compare(x2.getScore(), x1.getScore())).collect(toList());
                 m.setCandidates(cands);
@@ -267,16 +268,26 @@ public class Ranker {
         List<QueryDocument> docs = reader.readWikiDocs(lang, n_docs);
 
         FreeBaseQuery.loadDB(true);
+        List<String> tmp = FreeBaseQuery.getTypesFromTitle("apple", "en");
         WikiCandidateGenerator wcg = new WikiCandidateGenerator(lang, true);
         wcg.genCandidates(docs);
         wcg.selectMentions(docs, ratio);
-         ranker.train(docs, modelfile);
+        double a = 0;
+        double b = 0;
+        for(QueryDocument d : docs){
+            for(ELMention m: d.mentions){
+                a += m.getCandidates().size();
+                b += 1;
+            }
+        }
+        System.out.printf("average # of candidates = %f\n", a/b);
+        ranker.train(docs, modelfile);
         ranker.saveLexicalManager(modelfile + ".lm");
         return ranker;
     }
 
     public static void main(String[] args) {
-        System.out.println("123");
+         System.out.println("123");
         if(args.length < 3)
             logger.error("Require 3 arguments");
 

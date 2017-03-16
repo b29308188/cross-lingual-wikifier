@@ -9,11 +9,11 @@ import edu.illinois.cs.cogcomp.xlwikifier.core.Ranker;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.ELMention;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.Language;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
-import edu.illinois.cs.cogcomp.xlwikifier.evaluation.TACUtils;
 import edu.illinois.cs.cogcomp.xlwikifier.freebase.FreeBaseQuery;
 import edu.illinois.cs.cogcomp.xlwikifier.mlner.NERUtils;
 import edu.illinois.cs.cogcomp.xlwikifier.postprocessing.PostProcessing;
 import edu.illinois.cs.cogcomp.xlwikifier.postprocessing.SurfaceClustering;
+import edu.illinois.cs.cogcomp.xlwikifier.wikigraph.WikiGraph;
 import edu.illinois.cs.cogcomp.xlwikifier.wikipedia.LangLinker;
 import edu.illinois.cs.cogcomp.xlwikifier.core.WikiCandidateGenerator;
 import org.slf4j.Logger;
@@ -40,6 +40,7 @@ public class CrossLingualWikifier extends Annotator {
     private WikiCandidateGenerator wcg;
     private Ranker ranker;
     private LangLinker ll;
+    private WikiGraph WG = new WikiGraph();
     private NERUtils nerutils;
     public QueryDocument result; // saving results in this datastructure for the demo
 
@@ -156,11 +157,14 @@ public class CrossLingualWikifier extends Annotator {
      * @param doc
      */
     public void annotate(QueryDocument doc) {
-        System.out.println("Get Candidates...");
+        //System.out.println("Get Candidates...");
         wcg.genCandidates(doc);
 
-        System.out.println("Ranking...");
+        //System.out.println("Ranking...");
         ranker.setWikiTitleByModel(doc);
+
+        //personalized pagerank for the global inference
+        //WG.inference(doc);
 
         nerutils.setEnWikiTitle(doc);
 
@@ -168,6 +172,7 @@ public class CrossLingualWikifier extends Annotator {
 
         if(ConfigParameters.use_search)
             PostProcessing.wikiSearchSolver(doc,language.getShortName());
+
 
         // save the result, which is used in generating demo output
         this.result = doc;

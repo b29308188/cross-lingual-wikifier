@@ -110,7 +110,9 @@ public class WikiDocReader {
                 m.setSurface(null);
             }
         }
-        mentions = mentions.stream().filter(x -> x.getSurface() != null && !x.getSurface().trim().isEmpty())
+        mentions = mentions.stream().filter(x -> x.getSurface() != null
+                && !x.getSurface().trim().isEmpty())
+                //&& Character.isLowerCase(x.getSurface().charAt(0)))
                 .collect(Collectors.toList());
         QueryDocument doc = new QueryDocument(filename);
         doc.text = ta.getText();

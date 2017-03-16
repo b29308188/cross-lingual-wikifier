@@ -98,10 +98,16 @@ public class CrossWikis {
     }
 
     public static void main(String[] args) throws Exception {
-        importDump();
-        //loadDB(true);
-        String query= "";
+        //importDump();
+        System.out.println("load db");
+        loadDB(true);
+        System.out.println("query db");
+        String query = "power";
         Object[] tmp = surface2title.get(query);
+        Object[] tmp2 = surface2prob.get(query);
+        for(int i = 0 ; i < tmp.length; i++) {
+            System.out.println(tmp[i] + " ->" + tmp2[i]);
+        }
         db.close();
     }
 }

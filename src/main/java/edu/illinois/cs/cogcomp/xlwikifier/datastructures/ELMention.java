@@ -180,10 +180,13 @@ public class ELMention {
     }
 
     public void prepareFeatures(QueryDocument doc, RankerFeatureManager fm, List<ELMention> pms) {
+        //System.out.println("30");
         context30 = fm.getWeightedContextVector(this, doc, 5);
+        //System.out.println("100");
         context100 = fm.getWeightedContextVector(this, doc, 10);
+        //System.out.println("200");
         context200 = fm.getWeightedContextVector(this, doc, 25);
-
+        //System.out.println("what");
         if (!fm.ner_mode) {
             other_ne_vecs = new ArrayList<>();
             for (ELMention me : doc.mentions) {
