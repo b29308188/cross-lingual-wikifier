@@ -102,7 +102,7 @@ public class CrossWikis {
         System.out.println("load db");
         loadDB(true);
         System.out.println("query db");
-        String query = "power";
+        String query = "dogs";
         Object[] tmp = surface2title.get(query);
         Object[] tmp2 = surface2prob.get(query);
         for(int i = 0 ; i < tmp.length; i++) {

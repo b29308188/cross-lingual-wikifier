@@ -232,6 +232,10 @@ public class WordEmbedding {
     }
 
     public float cosine(float[] v1, float[] v2) {
+        if(v1 == null || v2 == null){
+            //System.out.println("NULL");
+            return 0;
+        }
         if (v1.length != v2.length) {
             System.out.println("Array size don't match");
             System.exit(-1);

@@ -6,6 +6,7 @@ import java.util.*;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.ELMention;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.QueryDocument;
 import edu.illinois.cs.cogcomp.xlwikifier.datastructures.WikiCand;
+import edu.illinois.cs.cogcomp.xlwikifier.core.Ranker;
 import org.mapdb.*;
 import org.mapdb.Serializer;
 
@@ -70,7 +71,7 @@ public class WikiGraph {
     public boolean queryEdge(String u, String v){
         return edges.containsKey(u+"@@@"+v) || edges.containsKey(v+"@@@"+u);
     }
-    public void inference(QueryDocument doc){
+    public void inference(QueryDocument doc, Ranker ranker){
         //initialization
         int M = doc.mentions.size();
         int topK = 5;
@@ -88,22 +89,35 @@ public class WikiGraph {
 
         //build graph
         for(int i = 0; i < M; i++){
-            for(int p = 0; p < doc.mentions.get(i).getCandidates().size() && p < topK; p++){
-                personal[i*topK+p] = doc.mentions.get(i).getCandidates().get(p).getScore();
+            ELMention m1 = doc.mentions.get(i);
+            for(int p = 0; p < m1.getCandidates().size() && p < topK; p++){
+                personal[i*topK+p] = m1.getCandidates().get(p).getScore();
                 for(int s = -window_size; s <= window_size; s ++){
                     int j = i + s;
-                    if(j < 0 || j >= M)
+                    if(j < 0 || j >= M || i == j)
                         continue;
-                    for(int q = 0; q < doc.mentions.get(j).getCandidates().size() && q < topK; q++){
-                        if(i != j && queryEdge(doc.mentions.get(i).getCandidates().get(p).title,
-                                doc.mentions.get(j).getCandidates().get(q).title)){
+                    ELMention m2 = doc.mentions.get(j);
+                    if(m1.getSurface().toLowerCase().equals(m2.getSurface().toLowerCase()))
+                        continue;
+                    for(int q = 0; q < m2.getCandidates().size() && q < topK; q++){
+                        if((m1.getCandidates().get(p).title.equals(m2.getCandidates().get(q).title)))
+                            continue;
+
+                        double sim = ranker.fm.we.cosine(
+                                ranker.fm.we.getTitleVector(m1.getCandidates().get(p).title, "en"),
+                                ranker.fm.we.getTitleVector(m2.getCandidates().get(q).title, "en"));
+                        if( sim> 0.7 )
+
+                        //if(queryEdge(m1.getCandidates().get(p).title,
+                                //m2.getCandidates().get(q).title))
+                        {
                             inNbrs[i*topK+p].add(j*topK+q);
                             outDeg[j*topK+q] += 1;
                             System.out.printf("m1 = %s, m2 = %s  u = %s, v = %s\n",
-                                    doc.mentions.get(i).getSurface(),
-                                    doc.mentions.get(j).getSurface(),
-                                    doc.mentions.get(i).getCandidates().get(p).title,
-                                    doc.mentions.get(j).getCandidates().get(q).title);
+                                    m1.getSurface(),
+                                    m2.getSurface(),
+                                    m1.getCandidates().get(p).title,
+                                    m2.getCandidates().get(q).title);
                         }
                     }
                 }

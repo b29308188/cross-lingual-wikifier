@@ -197,7 +197,7 @@ public class WikiCandidateGenerator {
                 naiveCand = true;
                 cand.setScore(1);
             }
-            cands.add(cand);
+            cands.add(0, cand);
         }
         if(!naiveCand){
             String title = surface.replace(" ", "_");

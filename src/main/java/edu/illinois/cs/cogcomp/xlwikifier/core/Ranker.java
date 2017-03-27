@@ -24,7 +24,7 @@ import static java.util.stream.Collectors.toList;
  */
 public class Ranker {
 
-    private RankerFeatureManager fm;
+    public RankerFeatureManager fm;
     private double[] model;
     private static Logger logger = LoggerFactory.getLogger(Ranker.class);
 

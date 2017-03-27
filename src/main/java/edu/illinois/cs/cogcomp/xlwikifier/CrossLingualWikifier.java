@@ -164,7 +164,7 @@ public class CrossLingualWikifier extends Annotator {
         ranker.setWikiTitleByModel(doc);
 
         //personalized pagerank for the global inference
-        //WG.inference(doc);
+        //WG.inference(doc, ranker);
 
         nerutils.setEnWikiTitle(doc);
 

@@ -16,7 +16,7 @@ public class PersonalizedPageRank {
     }
     public static double[] calScores(ArrayList<Integer>[] inNbrs, int[] outDeg, double[] personal ){
         int N = outDeg.length;
-        double alpha = 0.1;
+        double alpha = 0.85;
         double tol = 0.0001;
         double[] PR = new double[N];
         double[] oldPR = new double[N];
@@ -40,7 +40,7 @@ public class PersonalizedPageRank {
 
     public static void main(String[] args) throws Exception {
         int N = 3;
-        double alpha = 0.7;
+        double alpha = 0.85;
         double tol = 0.001;
         ArrayList<Integer>[] inNbrs = new ArrayList[N];
         for( int i = 0; i < N; i++)
